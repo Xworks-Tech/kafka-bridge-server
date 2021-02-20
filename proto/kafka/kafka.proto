@@ -1,0 +1,21 @@
+syntax = "proto3";
+package bridge;
+
+message PublishRequest {
+	string topic = 1;
+	oneof optional_content {
+		bytes content = 2;
+	}
+}
+
+message KafkaResponse {
+	bool success = 1;
+	oneof optional_content {
+		bytes content = 2;
+	}
+	
+}
+
+service KafkaStream {
+	rpc Subscribe(stream PublishRequest) returns (stream KafkaResponse) {};
+}
