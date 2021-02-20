@@ -74,7 +74,7 @@ impl KafkaStream for KafkaStreamService {
             while let Some(publication) = stream.next().await {
                 let message = match publication {
                     Ok(data) => data,
-                    Err(_) => panic!("Error decoding publication"),
+                    Err(_) => break,
                 };
                 let topic = message.topic.clone();
                 if let Some(sender) = sender.take() {
