@@ -15,7 +15,7 @@ tokio = {version ="1.2", features=["macros", "rt-multi-thread"]}
 tokio-stream = { version =  "0.1", features = ["net"] }
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
 async-stream = "0.3"
-kafka = "0.8.0"
+rdkafka = "0.25.0"
 
 [build-dependencies]
 tonic-build = "0.4"

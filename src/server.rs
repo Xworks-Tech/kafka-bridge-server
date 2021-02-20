@@ -1,12 +1,14 @@
-use std::pin::Pin;
-use std::time::Duration;
-
 use futures::{Stream, StreamExt};
+use std::pin::Pin;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 
-use kafka::consumer::{Consumer, FetchOffset, GroupOffsetStorage};
-use kafka::producer::{Producer, Record, RequiredAcks};
+use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
+use rdkafka::consumer::stream_consumer::StreamConsumer;
+use rdkafka::consumer::Consumer;
+use rdkafka::message::Message;
+use rdkafka::producer::{FutureProducer, FutureRecord};
+use std::time::Duration;
 
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
@@ -20,22 +22,30 @@ pub mod bridge {
 #[derive(Default)]
 pub struct KafkaStreamService {}
 
-pub fn create_kafka_consumer(topic: String) -> Consumer {
-    Consumer::from_hosts(vec!["[::1]:9092".to_owned()])
-        .with_topic(topic.to_owned())
-        .with_fallback_offset(FetchOffset::Latest)
-        .with_group("".to_owned())
-        .with_offset_storage(GroupOffsetStorage::Kafka)
+pub fn create_kafka_consumer(topic: String) -> StreamConsumer {
+    let client: StreamConsumer = ClientConfig::new()
+        .set("group.id", "honne")
+        .set("bootstrap.servers", "localhost:9092")
+        .set("enable.partition.eof", "false")
+        .set("session.timeout.ms", "6000")
+        .set("enable.auto.commit", "true")
+        //.set("statistics.interval.ms", "30000")
+        //.set("auto.offset.reset", "smallest")
+        .set_log_level(RDKafkaLogLevel::Debug)
         .create()
-        .unwrap()
+        .expect("Consumer creation failed");
+
+    client.subscribe(&vec![&topic[..]]).unwrap();
+    client
 }
 
-pub fn create_kafka_producer() -> Producer {
-    Producer::from_hosts(vec!["[::1]:9092".to_owned()])
-        .with_ack_timeout(Duration::from_secs(1))
-        .with_required_acks(RequiredAcks::One)
+pub fn create_kafka_producer() -> FutureProducer {
+    let producer: FutureProducer = ClientConfig::new()
+        .set("bootstrap.servers", "localhost:9092")
+        .set("message.timeout.ms", "5000")
         .create()
-        .unwrap()
+        .expect("Producer creation error");
+    producer
 }
 
 #[tonic::async_trait]
@@ -48,14 +58,15 @@ impl KafkaStream for KafkaStreamService {
         request: Request<tonic::Streaming<PublishRequest>>,
     ) -> Result<Response<Self::SubscribeStream>, Status> {
         println!("Initiated stream!");
+
+        let producer: FutureProducer = create_kafka_producer();
         let mut stream = request.into_inner();
-        let mut producer: Producer = create_kafka_producer();
         let mut stream_topic = String::from("");
         let (tx, rx): (
             mpsc::UnboundedSender<Result<bridge::KafkaResponse, tonic::Status>>,
             mpsc::UnboundedReceiver<Result<bridge::KafkaResponse, tonic::Status>>,
         ) = mpsc::unbounded_channel();
-        let (sender, receiver) = oneshot::channel::<Consumer>();
+        let (sender, receiver) = oneshot::channel::<StreamConsumer>();
 
         // Spawn the thread that listens to the client and publishes to kafka
         tokio::spawn(async move {
@@ -69,7 +80,7 @@ impl KafkaStream for KafkaStreamService {
                 if let Some(sender) = sender.take() {
                     // Check if a consumer has been created
                     stream_topic = topic.clone();
-                    sender.send(create_kafka_consumer(topic)).unwrap();
+                    sender.send(create_kafka_consumer(topic));
                 }
                 // Check if the incoming message had any content to publish
                 let content: Vec<u8> = match message.optional_content.clone() {
@@ -80,8 +91,13 @@ impl KafkaStream for KafkaStreamService {
                 };
 
                 producer
-                    .send(&Record::from_value(&stream_topic, content))
-                    .unwrap()
+                    .send::<Vec<u8>, _, _>(
+                        FutureRecord::to(&stream_topic)
+                            .payload(&String::from_utf8(content).unwrap()),
+                        Duration::from_secs(0),
+                    )
+                    .await
+                    .unwrap();
             }
         });
 
@@ -89,22 +105,26 @@ impl KafkaStream for KafkaStreamService {
         tokio::spawn(async move {
             tokio::select! {
                 consumed = receiver =>{
-                    let mut consumer = consumed.unwrap();
+                    let consumer = consumed.unwrap();
                     loop {
-                        for ms in consumer.poll().unwrap().iter()  {
-                            for m in ms.messages() {
+                        match consumer.recv().await {
+                            Err(e) => break,
+                            Ok(message) => {
+                                let payload = match message.payload_view::<str>() {
+                                    None => "",
+                                    Some(Ok(s)) => s,
+                                    Some(Err(e)) => {
+                                        ""
+                                    }
+                                };
                                 tx.send(Ok(KafkaResponse {
                                     success: true,
                                     optional_content: Some(
-                                        bridge::kafka_response::OptionalContent::Content(Vec::from(
-                                            m.value,
-                                        )),
+                                        bridge::kafka_response::OptionalContent::Content(payload.as_bytes().to_vec()),
                                     ),
                                 })).unwrap();
                             }
-                            consumer.consume_messageset(ms).unwrap();
                         }
-                        consumer.commit_consumed().unwrap();
                     }
                 }
             }
