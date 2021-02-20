@@ -21,7 +21,7 @@ pub mod bridge {
 pub struct KafkaStreamService {}
 
 pub fn create_kafka_consumer(topic: String) -> Consumer {
-    Consumer::from_hosts(vec!["localhost:9092".to_owned()])
+    Consumer::from_hosts(vec!["[::1]:9092".to_owned()])
         .with_topic(topic.to_owned())
         .with_fallback_offset(FetchOffset::Latest)
         .with_group("".to_owned())
@@ -31,7 +31,7 @@ pub fn create_kafka_consumer(topic: String) -> Consumer {
 }
 
 pub fn create_kafka_producer() -> Producer {
-    Producer::from_hosts(vec!["localhost:9092".to_owned()])
+    Producer::from_hosts(vec!["[::1]:9092".to_owned()])
         .with_ack_timeout(Duration::from_secs(1))
         .with_required_acks(RequiredAcks::One)
         .create()
@@ -76,15 +76,12 @@ impl KafkaStream for KafkaStreamService {
                     Some(bridge::publish_request::OptionalContent::Content(message_content)) => {
                         message_content
                     }
-                    None => vec![],
+                    None => continue,
                 };
 
-                // Publish if message had content
-                if content.len() > 0 {
-                    producer
-                        .send(&Record::from_value(&stream_topic, content))
-                        .unwrap()
-                }
+                producer
+                    .send(&Record::from_value(&stream_topic, content))
+                    .unwrap()
             }
         });
 
