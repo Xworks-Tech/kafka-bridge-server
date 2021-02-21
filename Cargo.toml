@@ -16,6 +16,7 @@ tokio-stream = { version =  "0.1", features = ["net"] }
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
 async-stream = "0.3"
 rdkafka = "0.25.0"
+log = "0.4"
 
 [build-dependencies]
 tonic-build = "0.4"

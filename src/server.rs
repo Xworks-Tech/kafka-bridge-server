@@ -1,14 +1,19 @@
-use futures::{Stream, StreamExt};
+use std::env;
 use std::pin::Pin;
-use tokio::sync::mpsc;
-use tokio::sync::oneshot;
+use std::time::Duration;
+
+use log::{info, warn};
+
+use futures::{Stream, StreamExt};
 
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
 use rdkafka::consumer::Consumer;
 use rdkafka::message::Message;
 use rdkafka::producer::{FutureProducer, FutureRecord};
-use std::time::Duration;
+
+use tokio::sync::mpsc;
+use tokio::sync::oneshot;
 
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
@@ -16,6 +21,11 @@ use tonic::{Request, Response, Status};
 use bridge::kafka_stream_server::{KafkaStream, KafkaStreamServer};
 use bridge::{KafkaResponse, PublishRequest};
 
+pub fn get_broker() -> String {
+    let host = env::var("KAFKA_HOST").unwrap();
+    let port = env::var("KAFKA_PORT").unwrap();
+    format!("{}:{}", host, port)
+}
 pub mod bridge {
     tonic::include_proto!("bridge"); // The string specified here must match the proto package name
 }
@@ -25,7 +35,7 @@ pub struct KafkaStreamService {}
 pub fn create_kafka_consumer(topic: String) -> StreamConsumer {
     let client: StreamConsumer = ClientConfig::new()
         .set("group.id", "honne")
-        .set("bootstrap.servers", "localhost:9092")
+        .set("bootstrap.servers", get_broker())
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "true")
@@ -41,7 +51,7 @@ pub fn create_kafka_consumer(topic: String) -> StreamConsumer {
 
 pub fn create_kafka_producer() -> FutureProducer {
     let producer: FutureProducer = ClientConfig::new()
-        .set("bootstrap.servers", "localhost:9092")
+        .set("bootstrap.servers", get_broker())
         .set("message.timeout.ms", "5000")
         .create()
         .expect("Producer creation error");
@@ -57,7 +67,7 @@ impl KafkaStream for KafkaStreamService {
         &self,
         request: Request<tonic::Streaming<PublishRequest>>,
     ) -> Result<Response<Self::SubscribeStream>, Status> {
-        println!("Initiated stream!");
+        info!("Initiated stream");
 
         let producer: FutureProducer = create_kafka_producer();
         let mut stream = request.into_inner();
@@ -74,13 +84,22 @@ impl KafkaStream for KafkaStreamService {
             while let Some(publication) = stream.next().await {
                 let message = match publication {
                     Ok(data) => data,
-                    Err(_) => break,
+                    Err(e) => {
+                        warn!("Error initialising client listener: {}", e);
+                        break;
+                    }
                 };
                 let topic = message.topic.clone();
                 if let Some(sender) = sender.take() {
                     // Check if a consumer has been created
                     stream_topic = topic.clone();
-                    sender.send(create_kafka_consumer(topic));
+                    match sender.send(create_kafka_consumer(topic)) {
+                        Ok(_) => (),
+                        Err(_) => {
+                            warn!("Error sending content to broker on topic: {}", stream_topic);
+                            break;
+                        }
+                    };
                 }
                 // Check if the incoming message had any content to publish
                 let content: Vec<u8> = match message.optional_content.clone() {
@@ -108,12 +127,15 @@ impl KafkaStream for KafkaStreamService {
                     let consumer = consumed.unwrap();
                     loop {
                         match consumer.recv().await {
-                            Err(e) => break,
+                            Err(e) => {
+                                warn!("Error consuming from kafka broker: {}", e);
+                                break},
                             Ok(message) => {
                                 let payload = match message.payload_view::<str>() {
                                     None => "",
                                     Some(Ok(s)) => s,
                                     Some(Err(e)) => {
+                                        warn!("Error viewing payload contents: {}", e);
                                         ""
                                     }
                                 };
@@ -140,7 +162,7 @@ impl KafkaStream for KafkaStreamService {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "[::1]:50051".parse().unwrap();
+    let addr = "[::0]:50051".parse().unwrap();
 
     println!("KafkaService listening on: {}", addr);
 
