@@ -1,6 +1,13 @@
-# A bridge service written in Rust to connect clients on different clusters
+# A bridge service written in Rust to connect to Redpanda kafka clients on different clusters
 
-### src/server.rs
+## TODO:
+
+- Unit tests
+- Integration tests
+- Improve `.proto` kafka definitions
+- Improve error handling and logging (i.e log client IPs)
+
+## src/server.rs
 
 - This contains a bi-directional GRPC streaming service that listens and publishes to a kafka client
 - Clients subscribe to the stream by sending a `PublishRequest` message containing a topic and possibly content
