@@ -19,65 +19,80 @@
 
 ```rust
 // Spawn the thread that listens to the client and publishes to kafka
-        tokio::spawn(async move {
-            let mut sender = Some(sender);
-            while let Some(publication) = stream.next().await {
-                let message = match publication {
-                    Ok(data) => data,
-                    Err(_) => panic!("Error decoding publication"),
-                };
-                let topic = message.topic.clone();
-                if let Some(sender) = sender.take() {
-                    // Check if a consumer has been created
-                    stream_topic = topic.clone();
-                    sender.send(create_kafka_consumer(topic)).unwrap();
-                }
-                // Check if the incoming message had any content to publish
-                let content: Vec<u8> = match message.optional_content.clone() {
-                    Some(bridge::publish_request::OptionalContent::Content(message_content)) => {
-                        message_content
-                    }
-                    None => vec![],
-                };
-
-                // Publish if message had content
-                if content.len() > 0 {
-                    producer
-                        .send(&Record::from_value(&stream_topic, content))
-                        .unwrap()
-                }
+tokio::spawn(async move {
+    let mut sender = Some(sender);
+    while let Some(publication) = stream.next().await {
+        let message = match publication {
+            Ok(data) => data,
+            Err(e) => {
+                warn!("Error initialising client listener: {}", e);
+                break;
             }
-        });
+        };
+        let topic = message.topic.clone();
+        if let Some(sender) = sender.take() {
+            // Check if a consumer has been created
+            stream_topic = topic.clone();
+            match sender.send(create_kafka_consumer(topic)) {
+                Ok(_) => (),
+                Err(_) => {
+                    warn!("Error sending content to broker on topic: {}", stream_topic);
+                    break;
+                }
+            };
+        }
+        // Check if the incoming message had any content to publish
+        let content: Vec<u8> = match message.optional_content.clone() {
+            Some(bridge::publish_request::OptionalContent::Content(message_content)) => {
+                message_content
+            }
+            None => continue,
+        };
+
+        producer
+            .send::<Vec<u8>, _, _>(
+                FutureRecord::to(&stream_topic)
+                    .payload(&String::from_utf8(content).unwrap()),
+                Duration::from_secs(0),
+            )
+            .await
+            .unwrap();
+    }
+});
 ```
 
 #### Kafka listener
 
 ```rust
 // Spawn the thread that listens to kafka and writes to the client
-        tokio::spawn(async move {
-            tokio::select! {
-                consumed = receiver =>{
-                    let mut consumer = consumed.unwrap();
-                    loop {
-                        for ms in consumer.poll().unwrap().iter()  {
-                            for m in ms.messages() {
-                                let send_to_broker = || async {
-                                    tx.send(Ok(KafkaResponse {
-                                        success: true,
-                                        optional_content: Some(
-                                            bridge::kafka_response::OptionalContent::Content(Vec::from(
-                                                m.value,
-                                            )),
-                                        ),
-                                    })).await.unwrap();
-                                };
-                                block_on(send_to_broker());
+tokio::spawn(async move {
+    tokio::select! {
+        consumed = receiver =>{
+            let consumer = consumed.unwrap();
+            loop {
+                match consumer.recv().await {
+                    Err(e) => {
+                        warn!("Error consuming from kafka broker: {}", e);
+                        break},
+                    Ok(message) => {
+                        let payload = match message.payload_view::<str>() {
+                            None => "",
+                            Some(Ok(s)) => s,
+                            Some(Err(e)) => {
+                                warn!("Error viewing payload contents: {}", e);
+                                ""
                             }
-                            consumer.consume_messageset(ms).unwrap();
-                        }
-                        consumer.commit_consumed().unwrap();
+                        };
+                        tx.send(Ok(KafkaResponse {
+                            success: true,
+                            optional_content: Some(
+                                bridge::kafka_response::OptionalContent::Content(payload.as_bytes().to_vec()),
+                            ),
+                        })).unwrap();
                     }
                 }
             }
-        });
+        }
+    }
+});
 ```
