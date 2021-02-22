@@ -20,7 +20,7 @@ use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 
 use bridge::kafka_stream_server::{KafkaStream, KafkaStreamServer};
-use bridge::{KafkaResponse, PublishRequest};
+use bridge::{KafkaResponse, PublishRequest, ConsumeRequest};
 
 pub fn get_broker() -> String {
     let host = env::var("KAFKA_HOST").unwrap();
@@ -63,6 +63,10 @@ pub fn create_kafka_producer() -> FutureProducer {
 #[tonic::async_trait]
 impl KafkaStream for KafkaStreamService {
     type SubscribeStream =
+        Pin<Box<dyn Stream<Item = Result<KafkaResponse, Status>> + Send + Sync + 'static>>;
+
+    
+        type ConsumeStream =
         Pin<Box<dyn Stream<Item = Result<KafkaResponse, Status>> + Send + Sync + 'static>>;
 
     async fn subscribe(
@@ -168,6 +172,49 @@ impl KafkaStream for KafkaStreamService {
                 as Self::SubscribeStream,
         ))
     }
+
+    async fn consume(&self, request:Request<ConsumeRequest>) -> Result<Response<Self::ConsumeStream>, Status> {
+        let (tx, rx) = mpsc::unbounded_channel();
+        
+        tokio::spawn(async move {
+            let message = match Some(request.get_ref()) {
+                Some(x) => x,
+                None => return
+            };
+            let topic = message.topic.clone();
+            let consumer = create_kafka_consumer(topic);
+            loop {
+                match consumer.recv().await {
+                    Err(e) => {
+                        warn!("Error consuming from kafka broker: {}", e);},
+                    Ok(message) => {
+                        let payload = match message.payload_view::<str>() {
+                            None => "",
+                            Some(Ok(s)) => s,
+                            Some(Err(e)) => {
+                                warn!("Error viewing payload contents: {}", e);
+                                ""
+                            }
+                        };
+                        if payload.len() > 0 {
+                            tx.send(Ok(KafkaResponse {
+                                success: true,
+                                optional_content: Some(
+                                    bridge::kafka_response::OptionalContent::Content(payload.as_bytes().to_vec()),
+                                ),
+                            })).unwrap();
+                            
+                        }
+                    }
+                }
+            }
+        });
+
+        Ok(Response::new(Box::pin(
+            tokio_stream::wrappers::UnboundedReceiverStream::new(rx),
+        )))
+}
+
 }
 
 #[tokio::main]

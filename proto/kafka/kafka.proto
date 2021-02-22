@@ -16,6 +16,12 @@ message KafkaResponse {
 	
 }
 
+message ConsumeRequest {
+	string topic = 1;
+}
+
 service KafkaStream {
 	rpc Subscribe(stream PublishRequest) returns (stream KafkaResponse) {};
+
+	rpc Consume(ConsumeRequest) returns (stream KafkaResponse){};
 }
