@@ -2,7 +2,8 @@ use std::env;
 use std::pin::Pin;
 use std::time::Duration;
 
-use log::{info, warn};
+extern crate pretty_env_logger;
+#[macro_use] extern crate log;
 
 use futures::{Stream, StreamExt};
 
@@ -39,6 +40,7 @@ pub fn create_kafka_consumer(topic: String) -> StreamConsumer {
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "6000")
         .set("enable.auto.commit", "true")
+        .set("allow.auto.create.topics", "true")
         //.set("statistics.interval.ms", "30000")
         //.set("auto.offset.reset", "smallest")
         .set_log_level(RDKafkaLogLevel::Debug)
@@ -124,7 +126,13 @@ impl KafkaStream for KafkaStreamService {
         tokio::spawn(async move {
             tokio::select! {
                 consumed = receiver =>{
-                    let consumer = consumed.unwrap();
+                    let consumer = match consumed{
+                        Ok(cons) =>cons,
+                        Err(e) => {
+                            warn!("Error retrieving consumer from mpsc channel: {}",e);
+                            return
+                        }
+                    };
                     loop {
                         match consumer.recv().await {
                             Err(e) => {
@@ -139,12 +147,14 @@ impl KafkaStream for KafkaStreamService {
                                         ""
                                     }
                                 };
-                                tx.send(Ok(KafkaResponse {
-                                    success: true,
-                                    optional_content: Some(
-                                        bridge::kafka_response::OptionalContent::Content(payload.as_bytes().to_vec()),
-                                    ),
-                                })).unwrap();
+                                if payload.len() > 0 {
+                                    tx.send(Ok(KafkaResponse {
+                                        success: true,
+                                        optional_content: Some(
+                                            bridge::kafka_response::OptionalContent::Content(payload.as_bytes().to_vec()),
+                                        ),
+                                    })).unwrap();
+                                }
                             }
                         }
                     }
@@ -162,9 +172,10 @@ impl KafkaStream for KafkaStreamService {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    pretty_env_logger::init();
     let addr = "[::0]:50051".parse().unwrap();
 
-    println!("KafkaService listening on: {}", addr);
+    info!( "KafkaService listening on: {}", addr);
 
     let svc = KafkaStreamServer::new(KafkaStreamService::default());
 

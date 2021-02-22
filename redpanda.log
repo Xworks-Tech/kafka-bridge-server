@@ -1,0 +1,236 @@
+1:C 18 Feb 2021 14:20:02.394 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 18 Feb 2021 14:20:02.394 # Redis version=6.0.10, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 18 Feb 2021 14:20:02.394 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 18 Feb 2021 14:20:02.398 * Running mode=standalone, port=6379.
+1:M 18 Feb 2021 14:20:02.398 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1:M 18 Feb 2021 14:20:02.399 # Server initialized
+1:M 18 Feb 2021 14:20:02.400 * Ready to accept connections
+1:signal-handler (1613658061) Received SIGTERM scheduling shutdown...
+1:M 18 Feb 2021 14:21:01.530 # User requested shutdown...
+1:M 18 Feb 2021 14:21:01.530 * Saving the final RDB snapshot before exiting.
+1:M 18 Feb 2021 14:21:01.532 * DB saved on disk
+1:M 18 Feb 2021 14:21:01.532 # Redis is now ready to exit, bye bye...
+1:C 18 Feb 2021 14:21:03.686 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 18 Feb 2021 14:21:03.686 # Redis version=6.0.10, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 18 Feb 2021 14:21:03.686 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 18 Feb 2021 14:21:03.687 * Running mode=standalone, port=6379.
+1:M 18 Feb 2021 14:21:03.687 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1:M 18 Feb 2021 14:21:03.687 # Server initialized
+1:M 18 Feb 2021 14:21:03.688 * Loading RDB produced by version 6.0.10
+1:M 18 Feb 2021 14:21:03.688 * RDB age 2 seconds
+1:M 18 Feb 2021 14:21:03.688 * RDB memory usage when created 0.77 Mb
+1:M 18 Feb 2021 14:21:03.688 * DB loaded from disk: 0.000 seconds
+1:M 18 Feb 2021 14:21:03.688 * Ready to accept connections
+1:signal-handler (1613658064) Received SIGTERM scheduling shutdown...
+1:M 18 Feb 2021 14:21:04.091 # User requested shutdown...
+1:M 18 Feb 2021 14:21:04.091 * Saving the final RDB snapshot before exiting.
+1:M 18 Feb 2021 14:21:04.093 * DB saved on disk
+1:M 18 Feb 2021 14:21:04.093 # Redis is now ready to exit, bye bye...
+1:C 18 Feb 2021 14:21:28.278 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 18 Feb 2021 14:21:28.278 # Redis version=6.0.10, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 18 Feb 2021 14:21:28.278 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 18 Feb 2021 14:21:28.281 * Running mode=standalone, port=6379.
+1:M 18 Feb 2021 14:21:28.281 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1:M 18 Feb 2021 14:21:28.281 # Server initialized
+1:M 18 Feb 2021 14:21:28.282 * Loading RDB produced by version 6.0.10
+1:M 18 Feb 2021 14:21:28.282 * RDB age 24 seconds
+1:M 18 Feb 2021 14:21:28.282 * RDB memory usage when created 0.77 Mb
+1:M 18 Feb 2021 14:21:28.282 * DB loaded from disk: 0.001 seconds
+1:M 18 Feb 2021 14:21:28.282 * Ready to accept connections
+1:signal-handler (1613658284) Received SIGTERM scheduling shutdown...
+1:M 18 Feb 2021 14:24:44.334 # User requested shutdown...
+1:M 18 Feb 2021 14:24:44.334 * Saving the final RDB snapshot before exiting.
+1:M 18 Feb 2021 14:24:44.337 * DB saved on disk
+1:M 18 Feb 2021 14:24:44.337 # Redis is now ready to exit, bye bye...
+1:C 18 Feb 2021 14:27:31.698 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 18 Feb 2021 14:27:31.698 # Redis version=6.0.10, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 18 Feb 2021 14:27:31.698 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 18 Feb 2021 14:27:31.701 * Running mode=standalone, port=6379.
+1:M 18 Feb 2021 14:27:31.701 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1:M 18 Feb 2021 14:27:31.701 # Server initialized
+1:M 18 Feb 2021 14:27:31.702 * Loading RDB produced by version 6.0.10
+1:M 18 Feb 2021 14:27:31.702 * RDB age 167 seconds
+1:M 18 Feb 2021 14:27:31.702 * RDB memory usage when created 0.77 Mb
+1:M 18 Feb 2021 14:27:31.702 * DB loaded from disk: 0.000 seconds
+1:M 18 Feb 2021 14:27:31.702 * Ready to accept connections
+1:signal-handler (1613659958) Received SIGTERM scheduling shutdown...
+1:M 18 Feb 2021 14:52:38.282 # User requested shutdown...
+1:M 18 Feb 2021 14:52:38.282 * Saving the final RDB snapshot before exiting.
+1:M 18 Feb 2021 14:52:38.284 * DB saved on disk
+1:M 18 Feb 2021 14:52:38.284 # Redis is now ready to exit, bye bye...
+1:C 18 Feb 2021 14:53:28.650 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 18 Feb 2021 14:53:28.650 # Redis version=6.0.10, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 18 Feb 2021 14:53:28.650 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 18 Feb 2021 14:53:28.652 * Running mode=standalone, port=6379.
+1:M 18 Feb 2021 14:53:28.652 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1:M 18 Feb 2021 14:53:28.652 # Server initialized
+1:M 18 Feb 2021 14:53:28.653 * Loading RDB produced by version 6.0.10
+1:M 18 Feb 2021 14:53:28.654 * RDB age 50 seconds
+1:M 18 Feb 2021 14:53:28.654 * RDB memory usage when created 0.77 Mb
+1:M 18 Feb 2021 14:53:28.654 * DB loaded from disk: 0.000 seconds
+1:M 18 Feb 2021 14:53:28.654 * Ready to accept connections
+1:signal-handler (1613660115) Received SIGTERM scheduling shutdown...
+1:M 18 Feb 2021 14:55:15.732 # User requested shutdown...
+1:M 18 Feb 2021 14:55:15.732 * Saving the final RDB snapshot before exiting.
+1:M 18 Feb 2021 14:55:15.733 * DB saved on disk
+1:M 18 Feb 2021 14:55:15.733 # Redis is now ready to exit, bye bye...
+1:C 18 Feb 2021 14:55:32.777 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 18 Feb 2021 14:55:32.777 # Redis version=6.0.10, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 18 Feb 2021 14:55:32.777 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 18 Feb 2021 14:55:32.779 * Running mode=standalone, port=6379.
+1:M 18 Feb 2021 14:55:32.779 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1:M 18 Feb 2021 14:55:32.779 # Server initialized
+1:M 18 Feb 2021 14:55:32.780 * Loading RDB produced by version 6.0.10
+1:M 18 Feb 2021 14:55:32.780 * RDB age 17 seconds
+1:M 18 Feb 2021 14:55:32.780 * RDB memory usage when created 0.77 Mb
+1:M 18 Feb 2021 14:55:32.780 * DB loaded from disk: 0.000 seconds
+1:M 18 Feb 2021 14:55:32.780 * Ready to accept connections
+1:signal-handler (1613660367) Received SIGTERM scheduling shutdown...
+1:M 18 Feb 2021 14:59:27.263 # User requested shutdown...
+1:M 18 Feb 2021 14:59:27.263 * Saving the final RDB snapshot before exiting.
+1:M 18 Feb 2021 14:59:27.265 * DB saved on disk
+1:M 18 Feb 2021 14:59:27.265 # Redis is now ready to exit, bye bye...
+1:C 18 Feb 2021 14:59:47.943 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 18 Feb 2021 14:59:47.943 # Redis version=6.0.10, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 18 Feb 2021 14:59:47.943 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 18 Feb 2021 14:59:47.946 * Running mode=standalone, port=6379.
+1:M 18 Feb 2021 14:59:47.946 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1:M 18 Feb 2021 14:59:47.946 # Server initialized
+1:M 18 Feb 2021 14:59:47.947 * Loading RDB produced by version 6.0.10
+1:M 18 Feb 2021 14:59:47.947 * RDB age 20 seconds
+1:M 18 Feb 2021 14:59:47.947 * RDB memory usage when created 0.77 Mb
+1:M 18 Feb 2021 14:59:47.947 * DB loaded from disk: 0.000 seconds
+1:M 18 Feb 2021 14:59:47.947 * Ready to accept connections
+1:signal-handler (1613660425) Received SIGTERM scheduling shutdown...
+1:M 18 Feb 2021 15:00:25.498 # User requested shutdown...
+1:M 18 Feb 2021 15:00:25.498 * Saving the final RDB snapshot before exiting.
+1:M 18 Feb 2021 15:00:25.502 * DB saved on disk
+1:M 18 Feb 2021 15:00:25.502 # Redis is now ready to exit, bye bye...
+1:C 18 Feb 2021 15:05:55.103 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 18 Feb 2021 15:05:55.104 # Redis version=6.0.10, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 18 Feb 2021 15:05:55.104 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 18 Feb 2021 15:05:55.107 * Running mode=standalone, port=6379.
+1:M 18 Feb 2021 15:05:55.107 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1:M 18 Feb 2021 15:05:55.107 # Server initialized
+1:M 18 Feb 2021 15:05:55.108 * Loading RDB produced by version 6.0.10
+1:M 18 Feb 2021 15:05:55.108 * RDB age 330 seconds
+1:M 18 Feb 2021 15:05:55.108 * RDB memory usage when created 0.77 Mb
+1:M 18 Feb 2021 15:05:55.108 * DB loaded from disk: 0.001 seconds
+1:M 18 Feb 2021 15:05:55.108 * Ready to accept connections
+1:signal-handler (1613661127) Received SIGTERM scheduling shutdown...
+1:M 18 Feb 2021 15:12:07.387 # User requested shutdown...
+1:M 18 Feb 2021 15:12:07.387 * Saving the final RDB snapshot before exiting.
+1:M 18 Feb 2021 15:12:07.388 * DB saved on disk
+1:M 18 Feb 2021 15:12:07.388 # Redis is now ready to exit, bye bye...
+1:C 18 Feb 2021 15:12:25.348 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 18 Feb 2021 15:12:25.348 # Redis version=6.0.10, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 18 Feb 2021 15:12:25.348 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 18 Feb 2021 15:12:25.350 * Running mode=standalone, port=6379.
+1:M 18 Feb 2021 15:12:25.350 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1:M 18 Feb 2021 15:12:25.351 # Server initialized
+1:M 18 Feb 2021 15:12:25.351 * Loading RDB produced by version 6.0.10
+1:M 18 Feb 2021 15:12:25.351 * RDB age 18 seconds
+1:M 18 Feb 2021 15:12:25.351 * RDB memory usage when created 0.79 Mb
+1:M 18 Feb 2021 15:12:25.351 * DB loaded from disk: 0.000 seconds
+1:M 18 Feb 2021 15:12:25.351 * Ready to accept connections
+1:signal-handler (1613661381) Received SIGTERM scheduling shutdown...
+1:M 18 Feb 2021 15:16:21.110 # User requested shutdown...
+1:M 18 Feb 2021 15:16:21.110 * Saving the final RDB snapshot before exiting.
+1:M 18 Feb 2021 15:16:21.111 * DB saved on disk
+1:M 18 Feb 2021 15:16:21.111 # Redis is now ready to exit, bye bye...
+1:C 18 Feb 2021 15:16:39.005 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 18 Feb 2021 15:16:39.006 # Redis version=6.0.10, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 18 Feb 2021 15:16:39.006 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 18 Feb 2021 15:16:39.007 * Running mode=standalone, port=6379.
+1:M 18 Feb 2021 15:16:39.007 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1:M 18 Feb 2021 15:16:39.008 # Server initialized
+1:M 18 Feb 2021 15:16:39.009 * Loading RDB produced by version 6.0.10
+1:M 18 Feb 2021 15:16:39.009 * RDB age 18 seconds
+1:M 18 Feb 2021 15:16:39.009 * RDB memory usage when created 0.79 Mb
+1:M 18 Feb 2021 15:16:39.009 * DB loaded from disk: 0.001 seconds
+1:M 18 Feb 2021 15:16:39.009 * Ready to accept connections
+1:signal-handler (1613661590) Received SIGTERM scheduling shutdown...
+1:M 18 Feb 2021 15:19:50.405 # User requested shutdown...
+1:M 18 Feb 2021 15:19:50.405 * Saving the final RDB snapshot before exiting.
+1:M 18 Feb 2021 15:19:50.406 * DB saved on disk
+1:M 18 Feb 2021 15:19:50.406 # Redis is now ready to exit, bye bye...
+1:C 18 Feb 2021 15:20:12.282 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 18 Feb 2021 15:20:12.282 # Redis version=6.0.10, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 18 Feb 2021 15:20:12.282 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 18 Feb 2021 15:20:12.285 * Running mode=standalone, port=6379.
+1:M 18 Feb 2021 15:20:12.285 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1:M 18 Feb 2021 15:20:12.285 # Server initialized
+1:M 18 Feb 2021 15:20:12.285 * Loading RDB produced by version 6.0.10
+1:M 18 Feb 2021 15:20:12.285 * RDB age 22 seconds
+1:M 18 Feb 2021 15:20:12.285 * RDB memory usage when created 0.79 Mb
+1:M 18 Feb 2021 15:20:12.285 * DB loaded from disk: 0.000 seconds
+1:M 18 Feb 2021 15:20:12.286 * Ready to accept connections
+1:signal-handler (1613661974) Received SIGTERM scheduling shutdown...
+1:M 18 Feb 2021 15:26:14.751 # User requested shutdown...
+1:M 18 Feb 2021 15:26:14.751 * Saving the final RDB snapshot before exiting.
+1:M 18 Feb 2021 15:26:14.753 * DB saved on disk
+1:M 18 Feb 2021 15:26:14.753 # Redis is now ready to exit, bye bye...
+1:C 18 Feb 2021 15:26:41.928 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 18 Feb 2021 15:26:41.928 # Redis version=6.0.10, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 18 Feb 2021 15:26:41.929 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 18 Feb 2021 15:26:41.931 * Running mode=standalone, port=6379.
+1:M 18 Feb 2021 15:26:41.931 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1:M 18 Feb 2021 15:26:41.931 # Server initialized
+1:M 18 Feb 2021 15:26:41.931 * Loading RDB produced by version 6.0.10
+1:M 18 Feb 2021 15:26:41.931 * RDB age 27 seconds
+1:M 18 Feb 2021 15:26:41.931 * RDB memory usage when created 0.77 Mb
+1:M 18 Feb 2021 15:26:41.931 * DB loaded from disk: 0.000 seconds
+1:M 18 Feb 2021 15:26:41.931 * Ready to accept connections
+1:signal-handler (1613662109) Received SIGTERM scheduling shutdown...
+1:M 18 Feb 2021 15:28:29.899 # User requested shutdown...
+1:M 18 Feb 2021 15:28:29.899 * Saving the final RDB snapshot before exiting.
+1:M 18 Feb 2021 15:28:29.901 * DB saved on disk
+1:M 18 Feb 2021 15:28:29.901 # Redis is now ready to exit, bye bye...
+1:C 18 Feb 2021 15:28:52.257 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 18 Feb 2021 15:28:52.257 # Redis version=6.0.10, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 18 Feb 2021 15:28:52.257 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 18 Feb 2021 15:28:52.261 * Running mode=standalone, port=6379.
+1:M 18 Feb 2021 15:28:52.261 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1:M 18 Feb 2021 15:28:52.261 # Server initialized
+1:M 18 Feb 2021 15:28:52.263 * Loading RDB produced by version 6.0.10
+1:M 18 Feb 2021 15:28:52.263 * RDB age 23 seconds
+1:M 18 Feb 2021 15:28:52.263 * RDB memory usage when created 0.79 Mb
+1:M 18 Feb 2021 15:28:52.263 * DB loaded from disk: 0.000 seconds
+1:M 18 Feb 2021 15:28:52.263 * Ready to accept connections
+1:signal-handler (1613662222) Received SIGTERM scheduling shutdown...
+1:M 18 Feb 2021 15:30:22.247 # User requested shutdown...
+1:M 18 Feb 2021 15:30:22.247 * Saving the final RDB snapshot before exiting.
+1:M 18 Feb 2021 15:30:22.249 * DB saved on disk
+1:M 18 Feb 2021 15:30:22.249 # Redis is now ready to exit, bye bye...
+1:C 18 Feb 2021 15:32:36.159 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 18 Feb 2021 15:32:36.159 # Redis version=6.0.10, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 18 Feb 2021 15:32:36.159 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 18 Feb 2021 15:32:36.164 * Running mode=standalone, port=6379.
+1:M 18 Feb 2021 15:32:36.164 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1:M 18 Feb 2021 15:32:36.164 # Server initialized
+1:M 18 Feb 2021 15:32:36.167 * Loading RDB produced by version 6.0.10
+1:M 18 Feb 2021 15:32:36.167 * RDB age 134 seconds
+1:M 18 Feb 2021 15:32:36.167 * RDB memory usage when created 0.77 Mb
+1:M 18 Feb 2021 15:32:36.167 * DB loaded from disk: 0.001 seconds
+1:M 18 Feb 2021 15:32:36.167 * Ready to accept connections
+1:signal-handler (1613662372) Received SIGTERM scheduling shutdown...
+1:M 18 Feb 2021 15:32:52.165 # User requested shutdown...
+1:M 18 Feb 2021 15:32:52.165 * Saving the final RDB snapshot before exiting.
+1:M 18 Feb 2021 15:32:52.168 * DB saved on disk
+1:M 18 Feb 2021 15:32:52.168 # Redis is now ready to exit, bye bye...
+1:C 18 Feb 2021 15:38:46.857 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 18 Feb 2021 15:38:46.857 # Redis version=6.0.10, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 18 Feb 2021 15:38:46.857 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 18 Feb 2021 15:38:46.861 * Running mode=standalone, port=6379.
+1:M 18 Feb 2021 15:38:46.861 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+1:M 18 Feb 2021 15:38:46.861 # Server initialized
+1:M 18 Feb 2021 15:38:46.863 * Loading RDB produced by version 6.0.10
+1:M 18 Feb 2021 15:38:46.863 * RDB age 354 seconds
+1:M 18 Feb 2021 15:38:46.863 * RDB memory usage when created 0.77 Mb
+1:M 18 Feb 2021 15:38:46.863 * DB loaded from disk: 0.001 seconds
+1:M 18 Feb 2021 15:38:46.863 * Ready to accept connections
+1:M 18 Feb 2021 16:38:47.037 * 1 changes in 3600 seconds. Saving...
+1:M 18 Feb 2021 16:38:47.038 * Background saving started by pid 15
+15:C 18 Feb 2021 16:38:47.044 * DB saved on disk
+15:C 18 Feb 2021 16:38:47.046 * RDB: 0 MB of memory used by copy-on-write
+1:M 18 Feb 2021 16:38:47.139 * Background saving terminated with success
