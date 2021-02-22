@@ -54,6 +54,7 @@ pub fn create_kafka_consumer(topic: String) -> StreamConsumer {
 pub fn create_kafka_producer() -> FutureProducer {
     let producer: FutureProducer = ClientConfig::new()
         .set("bootstrap.servers", get_broker())
+        .set("enable.auto.commit", "true")
         .set("message.timeout.ms", "5000")
         .create()
         .expect("Producer creation error");
@@ -182,17 +183,19 @@ impl KafkaStream for KafkaStreamService {
                 None => return
             };
             let topic = message.topic.clone();
+            info!("Consuming on topic: {}", topic);
             let consumer = create_kafka_consumer(topic);
+            
             loop {
                 match consumer.recv().await {
                     Err(e) => {
-                        warn!("Error consuming from kafka broker: {}", e);},
+                        error!("Error consuming from kafka broker: {}", e);},
                     Ok(message) => {
                         let payload = match message.payload_view::<str>() {
                             None => "",
                             Some(Ok(s)) => s,
                             Some(Err(e)) => {
-                                warn!("Error viewing payload contents: {}", e);
+                                error!("Error viewing payload contents: {}", e);
                                 ""
                             }
                         };
