@@ -57,8 +57,9 @@ pub fn create_kafka_producer() -> FutureProducer {
         .set("bootstrap.servers", get_broker())
         .set("enable.auto.commit", "true")
         .set("message.timeout.ms", "5000")
+        .set("allow.auto.create.topics", "true")
         .create()
-        .expect("Producer creation error");
+        .expect("Producer creation failed");
     producer
 }
 
@@ -106,7 +107,7 @@ impl KafkaStream for KafkaStreamService {
                     stream_topic = topic.clone();
                     match sender.send(create_kafka_consumer(topic)) {
                         Ok(_) => (),
-                        Err(e) => {
+                        Err(_) => {
                             error!("Error sending content to broker on topic: {}", stream_topic);
                             break;
                         }
@@ -254,7 +255,7 @@ impl KafkaStream for KafkaStreamService {
                 tx.send(Ok(ProduceResponse {
                     success: success,
                     message: Some(bridge::produce_response::Message::Content(format!(
-                        "{:?}",
+                        "{}",
                         content
                     ))),
                 }))
