@@ -3,7 +3,8 @@ use std::pin::Pin;
 use std::time::Duration;
 
 extern crate pretty_env_logger;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 
 use futures::{Stream, StreamExt};
 
@@ -20,7 +21,7 @@ use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 
 use bridge::kafka_stream_server::{KafkaStream, KafkaStreamServer};
-use bridge::{KafkaResponse, PublishRequest, ConsumeRequest};
+use bridge::{ConsumeRequest, KafkaResponse, ProduceResponse, PublishRequest};
 
 pub fn get_broker() -> String {
     let host = env::var("KAFKA_HOST").unwrap();
@@ -66,15 +67,17 @@ impl KafkaStream for KafkaStreamService {
     type SubscribeStream =
         Pin<Box<dyn Stream<Item = Result<KafkaResponse, Status>> + Send + Sync + 'static>>;
 
-    
-        type ConsumeStream =
+    type ConsumeStream =
         Pin<Box<dyn Stream<Item = Result<KafkaResponse, Status>> + Send + Sync + 'static>>;
+
+    type ProduceStream =
+        Pin<Box<dyn Stream<Item = Result<ProduceResponse, Status>> + Send + Sync + 'static>>;
 
     async fn subscribe(
         &self,
         request: Request<tonic::Streaming<PublishRequest>>,
     ) -> Result<Response<Self::SubscribeStream>, Status> {
-        info!("Initiated stream");
+        info!("Initiated read-write stream");
 
         let producer: FutureProducer = create_kafka_producer();
         let mut stream = request.into_inner();
@@ -92,18 +95,19 @@ impl KafkaStream for KafkaStreamService {
                 let message = match publication {
                     Ok(data) => data,
                     Err(e) => {
-                        warn!("Error initialising client listener: {}", e);
+                        error!("Error initialising client listener: {}", e);
                         break;
                     }
                 };
+                info!("Received message");
                 let topic = message.topic.clone();
                 if let Some(sender) = sender.take() {
                     // Check if a consumer has been created
                     stream_topic = topic.clone();
                     match sender.send(create_kafka_consumer(topic)) {
                         Ok(_) => (),
-                        Err(_) => {
-                            warn!("Error sending content to broker on topic: {}", stream_topic);
+                        Err(e) => {
+                            error!("Error sending content to broker on topic: {}", stream_topic);
                             break;
                         }
                     };
@@ -113,9 +117,13 @@ impl KafkaStream for KafkaStreamService {
                     Some(bridge::publish_request::OptionalContent::Content(message_content)) => {
                         message_content
                     }
-                    None => continue,
+                    None => {
+                        warn!("No content detected in PublishRequest");
+                        continue;
+                    }
                 };
 
+                // TODO: better error checking around here
                 producer
                     .send::<Vec<u8>, _, _>(
                         FutureRecord::to(&stream_topic)
@@ -124,6 +132,7 @@ impl KafkaStream for KafkaStreamService {
                     )
                     .await
                     .unwrap();
+                info!("Published to topic: {}", stream_topic)
             }
         });
 
@@ -141,14 +150,14 @@ impl KafkaStream for KafkaStreamService {
                     loop {
                         match consumer.recv().await {
                             Err(e) => {
-                                warn!("Error consuming from kafka broker: {}", e);
+                                error!("Error consuming from kafka broker: {}", e);
                                 break},
                             Ok(message) => {
                                 let payload = match message.payload_view::<str>() {
                                     None => "",
                                     Some(Ok(s)) => s,
                                     Some(Err(e)) => {
-                                        warn!("Error viewing payload contents: {}", e);
+                                        error!("Error viewing payload contents: {}", e);
                                         ""
                                     }
                                 };
@@ -159,6 +168,8 @@ impl KafkaStream for KafkaStreamService {
                                             bridge::kafka_response::OptionalContent::Content(payload.as_bytes().to_vec()),
                                         ),
                                     })).unwrap();
+                                } else {
+                                    warn!("No content detected in payload from broker");
                                 }
                             }
                         }
@@ -174,22 +185,25 @@ impl KafkaStream for KafkaStreamService {
         ))
     }
 
-    async fn consume(&self, request:Request<ConsumeRequest>) -> Result<Response<Self::ConsumeStream>, Status> {
+    async fn consume(
+        &self,
+        request: Request<ConsumeRequest>,
+    ) -> Result<Response<Self::ConsumeStream>, Status> {
         let (tx, rx) = mpsc::unbounded_channel();
-        
+        info!("Initiated read-only stream");
         tokio::spawn(async move {
             let message = match Some(request.get_ref()) {
                 Some(x) => x,
-                None => return
+                None => return,
             };
             let topic = message.topic.clone();
             info!("Consuming on topic: {}", topic);
             let consumer = create_kafka_consumer(topic);
-            
             loop {
                 match consumer.recv().await {
                     Err(e) => {
-                        error!("Error consuming from kafka broker: {}", e);},
+                        error!("Error consuming from kafka broker: {}", e);
+                    }
                     Ok(message) => {
                         let payload = match message.payload_view::<str>() {
                             None => "",
@@ -199,14 +213,19 @@ impl KafkaStream for KafkaStreamService {
                                 ""
                             }
                         };
+                        info!("Received message from broker");
                         if payload.len() > 0 {
                             tx.send(Ok(KafkaResponse {
                                 success: true,
                                 optional_content: Some(
-                                    bridge::kafka_response::OptionalContent::Content(payload.as_bytes().to_vec()),
+                                    bridge::kafka_response::OptionalContent::Content(
+                                        payload.as_bytes().to_vec(),
+                                    ),
                                 ),
-                            })).unwrap();
-                            
+                            }))
+                            .unwrap();
+                        } else {
+                            warn!("No content detected in payload from broker");
                         }
                     }
                 }
@@ -216,8 +235,75 @@ impl KafkaStream for KafkaStreamService {
         Ok(Response::new(Box::pin(
             tokio_stream::wrappers::UnboundedReceiverStream::new(rx),
         )))
-}
+    }
 
+    async fn produce(
+        &self,
+        request: Request<tonic::Streaming<PublishRequest>>,
+    ) -> Result<Response<Self::ProduceStream>, Status> {
+        let producer: FutureProducer = create_kafka_producer();
+        let mut stream = request.into_inner();
+        let (tx, rx): (
+            mpsc::UnboundedSender<Result<bridge::ProduceResponse, tonic::Status>>,
+            mpsc::UnboundedReceiver<Result<bridge::ProduceResponse, tonic::Status>>,
+        ) = mpsc::unbounded_channel();
+
+        info!("Initiated write-only stream");
+        tokio::spawn(async move {
+            let ack = |content: String, success: bool| {
+                tx.send(Ok(ProduceResponse {
+                    success: success,
+                    message: Some(bridge::produce_response::Message::Content(format!(
+                        "{:?}",
+                        content
+                    ))),
+                }))
+                .unwrap()
+            };
+            while let Some(publication) = stream.next().await {
+                let message = match publication {
+                    Ok(data) => data,
+                    Err(e) => {
+                        error!("Error receiving message from client: {}", e);
+                        ack((format!("{:?}", e)), false);
+                        break;
+                    }
+                };
+                info!("Received message");
+                let topic = message.topic.clone();
+                // Check if the incoming message had any content to publish
+                let content: String = match message.optional_content.clone() {
+                    Some(bridge::publish_request::OptionalContent::Content(message_content)) => {
+                        String::from_utf8(message_content).unwrap()
+                    }
+                    None => {
+                        warn!("No content detected in PublishRequest from client");
+                        ack("Error unwrapping content".to_string(), false);
+                        continue;
+                    }
+                };
+                let action = producer.send::<Vec<u8>, _, _>(
+                    FutureRecord::to(&topic).payload(&content),
+                    Duration::from_secs(0),
+                );
+                match action.await {
+                    Ok(_) => {
+                        info!("Successfully commited message to broker");
+                        ack("Successfully commited message to broker".to_string(), true)
+                    }
+                    Err(e) => {
+                        error!("Error commiting content to broker: {:?}", e);
+                        ack((format!("{:?}", e)), false)
+                    }
+                };
+            }
+        });
+
+        Ok(Response::new(
+            Box::pin(tokio_stream::wrappers::UnboundedReceiverStream::new(rx))
+                as Self::ProduceStream,
+        ))
+    }
 }
 
 #[tokio::main]
@@ -225,8 +311,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     pretty_env_logger::init();
     let addr = "[::0]:50051".parse().unwrap();
 
-    info!( "KafkaService listening on: {}", addr);
-
+    info!("Bridge service listening on: {}", addr);
+    info!("Kafka broker connected on: {}", get_broker());
     let svc = KafkaStreamServer::new(KafkaStreamService::default());
 
     Server::builder().add_service(svc).serve(addr).await?;

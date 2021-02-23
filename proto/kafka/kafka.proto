@@ -1,6 +1,43 @@
 syntax = "proto3";
 package bridge;
 
+
+/**
+* ###############################################
+* #  Services to connect to a redpanda cluster  #
+* ###############################################
+*/
+
+service KafkaStream {
+	// A bi-directional stream for writing and reading to kafka
+	rpc Subscribe(stream PublishRequest) returns (stream KafkaResponse) {};
+
+	// A unidirection stream for consuming a topic
+	rpc Consume(ConsumeRequest) returns (stream KafkaResponse){};
+
+	// A bi-directional stream for writing only that ACKs each new write
+	rpc Produce(stream PublishRequest) returns (stream ProduceResponse) {};
+}
+
+/**
+* #########################################
+* #  Unary messages (not to be streamed)  #
+* #########################################
+*/
+
+message ConsumeRequest {
+	string topic = 1;
+}
+
+
+
+/**
+* #######################
+* #  Streamed messages  #
+* #######################
+*/
+
+// Used to publish requests to the `Subscribe` and `Produce` rpc
 message PublishRequest {
 	string topic = 1;
 	oneof optional_content {
@@ -8,6 +45,8 @@ message PublishRequest {
 	}
 }
 
+// Used to respond to `Subscribe` and `Consume` rpcs
+// - Optional content to indicate data from a kafka broker
 message KafkaResponse {
 	bool success = 1;
 	oneof optional_content {
@@ -16,12 +55,14 @@ message KafkaResponse {
 	
 }
 
-message ConsumeRequest {
-	string topic = 1;
+// Used to respond to `Produce` rpcs
+// - Optional content to indicate error text
+message ProduceResponse {
+	bool success = 1;
+	oneof message {
+		string content = 2;
+	}
 }
 
-service KafkaStream {
-	rpc Subscribe(stream PublishRequest) returns (stream KafkaResponse) {};
 
-	rpc Consume(ConsumeRequest) returns (stream KafkaResponse){};
-}
+
