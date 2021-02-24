@@ -10,7 +10,7 @@ use futures::{Stream, StreamExt};
 
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
-use rdkafka::consumer::{BaseConsumer, Consumer. CommitMode};
+use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer};
 use rdkafka::message::Message;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 
@@ -232,7 +232,6 @@ impl KafkaStream for KafkaStreamService {
                                     warn!("No content detected in payload from broker");
                                 }
                                 consumer.commit_message(&message, CommitMode::Async).unwrap();
-                                
                             }
                         }
                     }
@@ -302,7 +301,9 @@ impl KafkaStream for KafkaStreamService {
                         } else {
                             warn!("No content detected in payload from broker");
                         }
-                        consumer.commit_message(&message, CommitMode::Async).unwrap();
+                        consumer
+                            .commit_message(&message, CommitMode::Async)
+                            .unwrap();
                     }
                 }
             }
