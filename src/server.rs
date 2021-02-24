@@ -10,7 +10,7 @@ use futures::{Stream, StreamExt};
 
 use rdkafka::config::{ClientConfig, RDKafkaLogLevel};
 use rdkafka::consumer::stream_consumer::StreamConsumer;
-use rdkafka::consumer::Consumer;
+use rdkafka::consumer::{BaseConsumer, Consumer. CommitMode};
 use rdkafka::message::Message;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 
@@ -39,7 +39,7 @@ pub fn create_kafka_consumer(topic: String) -> StreamConsumer {
         .set("group.id", "honne")
         .set("bootstrap.servers", get_broker())
         .set("enable.partition.eof", "false")
-        .set("session.timeout.ms", "6000")
+        .set("session.timeout.ms", "60000")
         .set("enable.auto.commit", "true")
         .set("allow.auto.create.topics", "true")
         //.set("statistics.interval.ms", "30000")
@@ -49,18 +49,78 @@ pub fn create_kafka_consumer(topic: String) -> StreamConsumer {
         .expect("Consumer creation failed");
 
     client.subscribe(&vec![&topic[..]]).unwrap();
+    info!("Consumer successfully subscribed to {}", topic);
     client
 }
 
 pub fn create_kafka_producer() -> FutureProducer {
     let producer: FutureProducer = ClientConfig::new()
         .set("bootstrap.servers", get_broker())
-        .set("enable.auto.commit", "true")
-        .set("message.timeout.ms", "5000")
-        .set("allow.auto.create.topics", "true")
+        .set("message.timeout.ms", "60000")
         .create()
         .expect("Producer creation failed");
     producer
+}
+
+pub fn print_metadata(brokers: &str, topic: Option<&str>, timeout: Duration, fetch_offsets: bool) {
+    let consumer: BaseConsumer = ClientConfig::new()
+        .set("bootstrap.servers", brokers)
+        .create()
+        .expect("Consumer creation failed");
+
+    trace!("Consumer created");
+
+    let metadata = consumer
+        .fetch_metadata(topic, timeout)
+        .expect("Failed to fetch metadata");
+
+    let mut message_count = 0;
+
+    println!("Cluster information:");
+    println!("  Broker count: {}", metadata.brokers().len());
+    println!("  Topics count: {}", metadata.topics().len());
+    println!("  Metadata broker name: {}", metadata.orig_broker_name());
+    println!("  Metadata broker id: {}\n", metadata.orig_broker_id());
+
+    println!("Brokers:");
+    for broker in metadata.brokers() {
+        println!(
+            "  Id: {}  Host: {}:{}  ",
+            broker.id(),
+            broker.host(),
+            broker.port()
+        );
+    }
+
+    println!("\nTopics:");
+    for topic in metadata.topics() {
+        println!("  Topic: {}  Err: {:?}", topic.name(), topic.error());
+        for partition in topic.partitions() {
+            println!(
+                "     Partition: {}  Leader: {}  Replicas: {:?}  ISR: {:?}  Err: {:?}",
+                partition.id(),
+                partition.leader(),
+                partition.replicas(),
+                partition.isr(),
+                partition.error()
+            );
+            if fetch_offsets {
+                let (low, high) = consumer
+                    .fetch_watermarks(topic.name(), partition.id(), Duration::from_secs(1))
+                    .unwrap_or((-1, -1));
+                println!(
+                    "       Low watermark: {}  High watermark: {} (difference: {})",
+                    low,
+                    high,
+                    high - low
+                );
+                message_count += high - low;
+            }
+        }
+        if fetch_offsets {
+            println!("     Total message count: {}", message_count);
+        }
+    }
 }
 
 #[tonic::async_trait]
@@ -114,21 +174,20 @@ impl KafkaStream for KafkaStreamService {
                     };
                 }
                 // Check if the incoming message had any content to publish
-                let content: Vec<u8> = match message.optional_content.clone() {
+                let content: String = match message.optional_content.clone() {
                     Some(bridge::publish_request::OptionalContent::Content(message_content)) => {
-                        message_content
+                        String::from_utf8(message_content).unwrap()
                     }
                     None => {
                         warn!("No content detected in PublishRequest");
                         continue;
                     }
                 };
-
+                info!("Writing ({}) on topic {} to broker", content, stream_topic);
                 // TODO: better error checking around here
                 producer
                     .send::<Vec<u8>, _, _>(
-                        FutureRecord::to(&stream_topic)
-                            .payload(&String::from_utf8(content).unwrap()),
+                        FutureRecord::to(&stream_topic).payload(&content),
                         Duration::from_secs(0),
                     )
                     .await
@@ -172,6 +231,8 @@ impl KafkaStream for KafkaStreamService {
                                 } else {
                                     warn!("No content detected in payload from broker");
                                 }
+                                consumer.commit_message(&message, CommitMode::Async).unwrap();
+                                
                             }
                         }
                     }
@@ -201,21 +262,34 @@ impl KafkaStream for KafkaStreamService {
             info!("Consuming on topic: {}", topic);
             let consumer = create_kafka_consumer(topic);
             loop {
-                match consumer.recv().await {
-                    Err(e) => {
-                        error!("Error consuming from kafka broker: {}", e);
+                let result = consumer.stream().next().await;
+                match result {
+                    None => {
+                        warn!("Received none-type from consumer stream");
+                        continue;
                     }
-                    Ok(message) => {
+                    Some(Err(e)) => {
+                        error!("Error consuming from kafka broker: {}", e);
+                        continue;
+                    }
+                    Some(Ok(message)) => {
                         let payload = match message.payload_view::<str>() {
-                            None => "",
-                            Some(Ok(s)) => s,
+                            None => {
+                                warn!("Recived none-type when unpacking payload");
+                                continue;
+                            }
+                            Some(Ok(s)) => {
+                                info!("Received payload: {:?}", s);
+                                s
+                            }
                             Some(Err(e)) => {
                                 error!("Error viewing payload contents: {}", e);
-                                ""
+                                continue;
                             }
                         };
                         info!("Received message from broker");
                         if payload.len() > 0 {
+                            info!("Sending payload {:?}", payload);
                             tx.send(Ok(KafkaResponse {
                                 success: true,
                                 optional_content: Some(
@@ -228,6 +302,7 @@ impl KafkaStream for KafkaStreamService {
                         } else {
                             warn!("No content detected in payload from broker");
                         }
+                        consumer.commit_message(&message, CommitMode::Async).unwrap();
                     }
                 }
             }
@@ -283,6 +358,7 @@ impl KafkaStream for KafkaStreamService {
                         continue;
                     }
                 };
+                info!("Writing ({}) on topic {} to broker", content, topic);
                 let action = producer.send::<Vec<u8>, _, _>(
                     FutureRecord::to(&topic).payload(&content),
                     Duration::from_secs(0),
@@ -314,6 +390,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Bridge service listening on: {}", addr);
     info!("Kafka broker connected on: {}", get_broker());
+    print_metadata(&(get_broker()), None, Duration::from_millis(10000), false);
     let svc = KafkaStreamServer::new(KafkaStreamService::default());
 
     Server::builder().add_service(svc).serve(addr).await?;
