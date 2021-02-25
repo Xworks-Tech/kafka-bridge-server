@@ -268,7 +268,7 @@ impl KafkaStream for KafkaStreamService {
                         continue;
                     }
                     Some(Err(e)) => {
-                        error!("Error consuming from kafka broker: {}", e);
+                        error!("Error consuming from kafka broker: {:?}", e);
                         continue;
                     }
                     Some(Ok(message)) => {
@@ -283,32 +283,40 @@ impl KafkaStream for KafkaStreamService {
                             }
                             Some(Err(e)) => {
                                 error!("Error viewing payload contents: {}", e);
-                                continue;
+                                return;
                             }
                         };
-                        info!("Received message from broker");
+                        info!("Received message from broker in read-only stream");
                         if payload.len() > 0 {
                             info!("Sending payload {:?}", payload);
-                            tx.send(Ok(KafkaResponse {
+                            match tx.send(Ok(KafkaResponse {
                                 success: true,
                                 optional_content: Some(
                                     bridge::kafka_response::OptionalContent::Content(
-                                        payload.as_bytes().to_vec(),
+                                        (*payload).as_bytes().to_vec(),
                                     ),
                                 ),
-                            }))
-                            .unwrap();
+                            })) {
+                                Ok(_) => info!("Successfully sent payload to client"),
+                                Err(e) => {
+                                    trace!("GRPC error sending message to client {:?}", e);
+                                    return;
+                                }
+                            }
                         } else {
                             warn!("No content detected in payload from broker");
                         }
-                        consumer
-                            .commit_message(&message, CommitMode::Async)
-                            .unwrap();
+                        match consumer.commit_message(&message, CommitMode::Async) {
+                            Ok(_) => (),
+                            Err(e) => {
+                                error!("Error commiting a consumed message: {:?}", e);
+                                return;
+                            }
+                        }
                     }
                 }
             }
         });
-
         Ok(Response::new(Box::pin(
             tokio_stream::wrappers::UnboundedReceiverStream::new(rx),
         )))
@@ -326,16 +334,22 @@ impl KafkaStream for KafkaStreamService {
         ) = mpsc::unbounded_channel();
 
         info!("Initiated write-only stream");
+
         tokio::spawn(async move {
             let ack = |content: String, success: bool| {
-                tx.send(Ok(ProduceResponse {
+                match tx.send(Ok(ProduceResponse {
                     success: success,
                     message: Some(bridge::produce_response::Message::Content(format!(
                         "{}",
                         content
                     ))),
-                }))
-                .unwrap()
+                })) {
+                    Ok(_) => true,
+                    Err(e) => {
+                        error!("Error acking client: {}", e);
+                        false
+                    }
+                };
             };
             while let Some(publication) = stream.next().await {
                 let message = match publication {

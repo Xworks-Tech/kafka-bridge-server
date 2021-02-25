@@ -39,5 +39,5 @@ COPY --from=alpine /etc/group /etc/group
 
 COPY --from=build /root/.cargo/bin/kafka-bridge-server .
 USER appuser:appuser
-ENV RUST_LOG=info
+ENV RUST_LOG=trace
 CMD ["./kafka-bridge-server"]
