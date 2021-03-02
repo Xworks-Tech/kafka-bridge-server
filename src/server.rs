@@ -250,7 +250,7 @@ impl KafkaStream for KafkaStreamService {
         &self,
         request: Request<ConsumeRequest>,
     ) -> Result<Response<Self::ConsumeStream>, Status> {
-        let (tx, rx) = mpsc::channel(1);
+        let (tx, rx) = mpsc::unbounded_channel();
         info!("Initiated read-only stream");
         tokio::spawn(async move {
             let message = match Some(request.get_ref()) {
@@ -289,17 +289,17 @@ impl KafkaStream for KafkaStreamService {
                         info!("Received message from broker in read-only stream");
                         if payload.len() > 0 {
                             info!("Sending payload {:?}", payload);
-                            match block_on(tx.send(Ok(KafkaResponse {
+                            match tx.send(Ok(KafkaResponse {
                                 success: true,
                                 optional_content: Some(
                                     bridge::kafka_response::OptionalContent::Content(
                                         (*payload).as_bytes().to_vec(),
                                     ),
                                 ),
-                            }))) {
+                            })) {
                                 Ok(_) => info!("Successfully sent payload to client"),
                                 Err(e) => {
-                                    trace!("GRPC error sending message to client {:?}", e);
+                                    error!("GRPC error sending message to client {:?}", e);
                                     return;
                                 }
                             }
@@ -318,7 +318,7 @@ impl KafkaStream for KafkaStreamService {
             }
         });
         Ok(Response::new(Box::pin(
-            tokio_stream::wrappers::ReceiverStream::new(rx),
+            tokio_stream::wrappers::UnboundedReceiverStream::new(rx),
         )))
     }
 
