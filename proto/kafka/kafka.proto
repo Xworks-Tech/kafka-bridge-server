@@ -27,6 +27,7 @@ service KafkaStream {
 
 message ConsumeRequest {
 	string topic = 1;
+	string id = 2;
 }
 
 

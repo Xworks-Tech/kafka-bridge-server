@@ -22,7 +22,8 @@ FROM clux/muslrust as build
 WORKDIR /usr/src
 
 # Download the target for static linking & add rustfmt
-RUN rustup target add x86_64-unknown-linux-musl && rustup component add rustfmt --toolchain nightly-2021-02-20-x86_64-unknown-linux-gnu
+RUN rustup target add x86_64-unknown-linux-musl  && rustup component add rustfmt
+RUN rustup toolchain install nightly
 
 # Compile and install the binary
 COPY . .
@@ -40,4 +41,5 @@ COPY --from=alpine /etc/group /etc/group
 COPY --from=build /root/.cargo/bin/kafka-bridge-server .
 USER appuser:appuser
 ENV RUST_LOG=info
+ENV RUST_BACKTRACE=1
 CMD ["./kafka-bridge-server"]

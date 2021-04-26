@@ -1,5 +1,7 @@
 use std::env;
+use std::ops::Deref;
 use std::pin::Pin;
+use std::task::{Context, Poll};
 use std::time::Duration;
 
 extern crate pretty_env_logger;
@@ -14,7 +16,6 @@ use rdkafka::consumer::{BaseConsumer, CommitMode, Consumer};
 use rdkafka::message::Message;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 
-use futures::executor::block_on;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tonic::transport::Server;
@@ -22,6 +23,32 @@ use tonic::{Request, Response, Status};
 
 use bridge::kafka_stream_server::{KafkaStream, KafkaStreamServer};
 use bridge::{ConsumeRequest, KafkaResponse, ProduceResponse, PublishRequest};
+
+pub struct DropReceiver<T> {
+    rx: mpsc::UnboundedReceiver<T>,
+}
+
+impl<T> Stream for DropReceiver<T> {
+    type Item = T;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        Pin::new(&mut self.rx).poll_recv(cx)
+    }
+}
+impl<T> Deref for DropReceiver<T> {
+    type Target = mpsc::UnboundedReceiver<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.rx
+    }
+}
+
+impl<T> Drop for DropReceiver<T> {
+    fn drop(&mut self) {
+        info!("Connection has been droped");
+        self.rx.close();
+    }
+}
 
 pub fn get_broker() -> String {
     let host = env::var("KAFKA_HOST").unwrap();
@@ -34,9 +61,9 @@ pub mod bridge {
 #[derive(Default)]
 pub struct KafkaStreamService {}
 
-pub fn create_kafka_consumer(topic: String) -> StreamConsumer {
+pub fn create_kafka_consumer(topic: &String, user_id: &String) -> StreamConsumer {
     let client: StreamConsumer = ClientConfig::new()
-        .set("group.id", "honne")
+        .set("group.id", user_id)
         .set("bootstrap.servers", get_broker())
         .set("enable.partition.eof", "false")
         .set("session.timeout.ms", "60000")
@@ -53,10 +80,12 @@ pub fn create_kafka_consumer(topic: String) -> StreamConsumer {
     client
 }
 
+// enable.idempotence ensures messages are produced exactly once
 pub fn create_kafka_producer() -> FutureProducer {
     let producer: FutureProducer = ClientConfig::new()
         .set("bootstrap.servers", get_broker())
         .set("message.timeout.ms", "60000")
+        .set("enable_idempotence", "true")
         .create()
         .expect("Producer creation failed");
     producer
@@ -75,7 +104,6 @@ pub fn print_metadata(brokers: &str, topic: Option<&str>, timeout: Duration, fet
         .expect("Failed to fetch metadata");
 
     let mut message_count = 0;
-
     println!("Cluster information:");
     println!("  Broker count: {}", metadata.brokers().len());
     println!("  Topics count: {}", metadata.topics().len());
@@ -161,11 +189,11 @@ impl KafkaStream for KafkaStreamService {
                     }
                 };
                 info!("Received message");
-                let topic = message.topic.clone();
                 if let Some(sender) = sender.take() {
                     // Check if a consumer has been created
-                    stream_topic = topic.clone();
-                    match sender.send(create_kafka_consumer(topic)) {
+                    stream_topic = message.topic.clone();
+                    //let id = message.id.clone();
+                    match sender.send(create_kafka_consumer(&stream_topic, &String::from(""))) {
                         Ok(_) => (),
                         Err(_) => {
                             error!("Error sending content to broker on topic: {}", stream_topic);
@@ -250,7 +278,9 @@ impl KafkaStream for KafkaStreamService {
         &self,
         request: Request<ConsumeRequest>,
     ) -> Result<Response<Self::ConsumeStream>, Status> {
+        //tokio::sync::mpsc::UnboundedSender<std::result::Result<bridge::KafkaResponse, tonic::Status>>
         let (tx, rx) = mpsc::unbounded_channel();
+        let rx = DropReceiver { rx: rx };
         info!("Initiated read-only stream");
         tokio::spawn(async move {
             let message = match Some(request.get_ref()) {
@@ -258,8 +288,9 @@ impl KafkaStream for KafkaStreamService {
                 None => return,
             };
             let topic = message.topic.clone();
-            info!("Consuming on topic: {}", topic);
-            let consumer = create_kafka_consumer(topic);
+            let id = message.id.clone();
+            info!("Consuming on topic: {} : {}", topic, "");
+            let consumer = create_kafka_consumer(&topic, &id);
             loop {
                 let result = consumer.stream().next().await;
                 match result {
@@ -283,6 +314,7 @@ impl KafkaStream for KafkaStreamService {
                             }
                             Some(Err(e)) => {
                                 error!("Error viewing payload contents: {}", e);
+                                drop(tx);
                                 return;
                             }
                         };
@@ -297,29 +329,31 @@ impl KafkaStream for KafkaStreamService {
                                     ),
                                 ),
                             })) {
-                                Ok(_) => info!("Successfully sent payload to client"),
+                                Ok(_) => {
+                                    info!("Successfully sent payload to client");
+                                    match consumer.commit_message(&message, CommitMode::Async) {
+                                        Ok(_) => info!("Message successfully commited"),
+                                        Err(e) => {
+                                            error!("Error commiting a consumed message: {:?}", e);
+                                            drop(tx);
+                                            return;
+                                        }
+                                    }
+                                }
                                 Err(e) => {
-                                    error!("GRPC error sending message to client {:?}", e);
+                                    error!("GRPC error sending message to client {}", e);
+                                    drop(tx);
                                     return;
                                 }
                             }
                         } else {
                             warn!("No content detected in payload from broker");
                         }
-                        match consumer.commit_message(&message, CommitMode::Async) {
-                            Ok(_) => (),
-                            Err(e) => {
-                                error!("Error commiting a consumed message: {:?}", e);
-                                return;
-                            }
-                        }
                     }
                 }
             }
         });
-        Ok(Response::new(Box::pin(
-            tokio_stream::wrappers::UnboundedReceiverStream::new(rx),
-        )))
+        Ok(Response::new(Box::pin(rx)))
     }
 
     async fn produce(
@@ -332,7 +366,7 @@ impl KafkaStream for KafkaStreamService {
             mpsc::UnboundedSender<Result<bridge::ProduceResponse, tonic::Status>>,
             mpsc::UnboundedReceiver<Result<bridge::ProduceResponse, tonic::Status>>,
         ) = mpsc::unbounded_channel();
-
+        let rx = DropReceiver { rx: rx };
         info!("Initiated write-only stream");
 
         tokio::spawn(async move {
@@ -344,10 +378,10 @@ impl KafkaStream for KafkaStreamService {
                         content
                     ))),
                 })) {
-                    Ok(_) => true,
+                    Ok(_) => (),
                     Err(e) => {
                         error!("Error acking client: {}", e);
-                        false
+                        ()
                     }
                 };
             };
@@ -356,7 +390,7 @@ impl KafkaStream for KafkaStreamService {
                     Ok(data) => data,
                     Err(e) => {
                         error!("Error receiving message from client: {}", e);
-                        ack((format!("{:?}", e)), false);
+                        ack(format!("{:?}", e), false);
                         break;
                     }
                 };
@@ -381,20 +415,18 @@ impl KafkaStream for KafkaStreamService {
                 match action.await {
                     Ok(_) => {
                         info!("Successfully commited message to broker");
-                        ack("Successfully commited message to broker".to_string(), true)
+                        ack("Successfully commited message to broker".to_string(), true);
                     }
                     Err(e) => {
                         error!("Error commiting content to broker: {:?}", e);
-                        ack((format!("{:?}", e)), false)
+                        ack(format!("{:?}", e), false);
+                        break;
                     }
                 };
             }
         });
 
-        Ok(Response::new(
-            Box::pin(tokio_stream::wrappers::UnboundedReceiverStream::new(rx))
-                as Self::ProduceStream,
-        ))
+        Ok(Response::new(Box::pin(rx)))
     }
 }
 
